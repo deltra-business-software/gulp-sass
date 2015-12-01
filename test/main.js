@@ -148,6 +148,22 @@ describe('gulp-sass -- async compile', function() {
       err.message.indexOf('test/scss/error.scss').should.not.equal(-1);
       // Error must include line and column error occurs on
       err.message.indexOf('on line 2').should.not.equal(-1);
+      // Error must include relativePath property
+      err.relativePath.should.equal('test/scss/error.scss');
+      done();
+    });
+    stream.write(errorFile);
+  });
+
+  it('should preserve the original sass error message', function(done) {
+    var errorFile = createVinyl('error.scss');
+    var stream = sass();
+
+    stream.on('error', function(err) {
+      // Error must include original error message
+      err.messageOriginal.indexOf('property "font" must be followed by a \':\'').should.not.equal(-1);
+      // Error must not format or change the original error message
+      err.messageOriginal.indexOf('on line 2').should.equal(-1);
       done();
     });
     stream.write(errorFile);
@@ -201,9 +217,9 @@ describe('gulp-sass -- async compile', function() {
 
     // Expected sources are relative to file.base
     var expectedSources = [
+      'inheritance.scss',
       'includes/_cats.scss',
       'includes/_dogs.sass',
-      'inheritance.scss'
     ];
 
     var stream;
@@ -379,6 +395,7 @@ describe('gulp-sass -- sync compile', function() {
 
     stream.on('error', function(err) {
       err.message.indexOf('property "font" must be followed by a \':\'').should.not.equal(-1);
+      err.relativePath.should.equal('test/scss/error.scss');
       done();
     });
     stream.write(errorFile);
@@ -389,9 +406,9 @@ describe('gulp-sass -- sync compile', function() {
 
     // Expected sources are relative to file.base
     var expectedSources = [
+      'inheritance.scss',
       'includes/_cats.scss',
       'includes/_dogs.sass',
-      'inheritance.scss'
     ];
 
     var stream;
@@ -415,10 +432,16 @@ describe('gulp-sass -- sync compile', function() {
   });
 
   it('should work with gulp-sourcemaps and autoprefixer', function(done) {
-    var expectedSources = [
+    var expectedSourcesBefore = [
+      'inheritance.scss',
       'includes/_cats.scss',
       'includes/_dogs.sass',
-      'inheritance.scss'
+    ];
+
+    var expectedSourcesAfter = [
+      'includes/_cats.scss',
+      'includes/_dogs.sass',
+      'inheritance.scss',
     ];
 
     gulp.src(path.join(__dirname, '/scss/inheritance.scss'))
@@ -426,14 +449,14 @@ describe('gulp-sass -- sync compile', function() {
       .pipe(sass.sync())
       .pipe(tap(function(file) {
         should.exist(file.sourceMap);
-        file.sourceMap.sources.should.eql(expectedSources);
+        file.sourceMap.sources.should.eql(expectedSourcesBefore);
       }))
       .pipe(postcss([autoprefixer()]))
       .pipe(sourcemaps.write())
       .pipe(gulp.dest(path.join(__dirname, '/results/')))
       .pipe(tap(function(file) {
         should.exist(file.sourceMap);
-        file.sourceMap.sources.should.eql(expectedSources);
+        file.sourceMap.sources.should.eql(expectedSourcesAfter);
       }))
       .on('end', done);
   });
@@ -459,7 +482,13 @@ describe('gulp-sass -- sync compile', function() {
   });
 
   it('should work with gulp-sourcemaps and autoprefixer with different file.base', function(done) {
-    var expectedSources = [
+    var expectedSourcesBefore = [
+      'scss/inheritance.scss',
+      'scss/includes/_cats.scss',
+      'scss/includes/_dogs.sass'
+    ];
+
+    var expectedSourcesAfter = [
       'scss/includes/_cats.scss',
       'scss/includes/_dogs.sass',
       'scss/inheritance.scss'
@@ -470,12 +499,12 @@ describe('gulp-sass -- sync compile', function() {
       .pipe(sass.sync())
       .pipe(tap(function(file) {
         should.exist(file.sourceMap);
-        file.sourceMap.sources.should.eql(expectedSources);
+        file.sourceMap.sources.should.eql(expectedSourcesBefore);
       }))
       .pipe(postcss([autoprefixer()]))
       .pipe(tap(function(file) {
         should.exist(file.sourceMap);
-        file.sourceMap.sources.should.eql(expectedSources);
+        file.sourceMap.sources.should.eql(expectedSourcesAfter);
       }))
       .on('end', done);
   });
